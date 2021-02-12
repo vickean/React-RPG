@@ -8,6 +8,7 @@
       "plugin:prettier/recommended"
   ],
   "rules": {
-      "no-set-state": "off"
+      "no-set-state": "off",
+      "no-unused-vars": "warn"
   }
 }
