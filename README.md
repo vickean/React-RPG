@@ -1,6 +1,7 @@
 # React-RPG
 
 Experiment to create an RPG using ReactJs.
+Based on the work of [Drew Conley](https://github.com/drewconley).
 
 # Getting Started with Create React App
 
