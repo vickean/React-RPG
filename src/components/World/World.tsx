@@ -1,4 +1,4 @@
-import React, { useEffect, useReducer } from "react";
+import React, { Fragment, useCallback, useEffect, useReducer } from "react";
 import "./World.css";
 
 interface CharacterProps {
@@ -25,11 +25,11 @@ enum directions {
    RIGHT = "right",
 }
 
-const keys: { 38: string; 37: string; 39: string; 40: string } = {
-   38: directions.UP,
-   37: directions.LEFT,
-   39: directions.RIGHT,
-   40: directions.DOWN,
+const keys: { [index: string]: string } = {
+   ArrowUp: directions.UP,
+   ArrowLeft: directions.LEFT,
+   ArrowRight: directions.RIGHT,
+   ArrowDown: directions.DOWN,
 };
 
 enum ActionType {
@@ -55,7 +55,7 @@ export default function World() {
             return { ...state, posX: newPosX, posY: newPosY };
          }
          case ActionType.UpdateHeldDirections: {
-            return state;
+            return { ...state, heldDirections: action.payload };
          }
          default:
             return state;
@@ -71,20 +71,55 @@ export default function World() {
 
    const [state, dispatch] = useReducer(reducer, initialState);
 
-   useEffect(() => {
-      document.addEventListener("keydown", (e) => {
-         console.log("KEYDN>>> ", e);
-      });
+   const onKeyDown = useCallback((event: KeyboardEvent) => {
+      const heldDirections = [...state.heldDirections];
+      const dir = keys[event.key];
 
-      document.addEventListener("keyup", (e) => {
-         console.log("KEYUP>>> ", e);
-      });
+      if (dir && heldDirections.indexOf(dir) === -1) {
+         heldDirections.unshift(dir);
+         dispatch({
+            type: ActionType.UpdateHeldDirections,
+            payload: heldDirections,
+         });
+      }
    }, []);
 
+   const onKeyUp = useCallback((event: KeyboardEvent) => {
+      const heldDirections = [...state.heldDirections];
+      const dir = keys[event.key];
+      const index = heldDirections.indexOf(dir);
+
+      if (index > -1) {
+         heldDirections.splice(index, 1);
+         dispatch({
+            type: ActionType.UpdateHeldDirections,
+            payload: heldDirections,
+         });
+      }
+   }, []);
+
+   const placeCharacter = () => {
+      const pixelSize = parseInt(
+         getComputedStyle(document.documentElement).getPropertyValue("--pixel-size")
+      );
+      console.log("PIXELSIZE>>> ", pixelSize);
+   };
+
+   useEffect(() => {
+      document.addEventListener("keydown", onKeyDown);
+      document.addEventListener("keyup", onKeyUp);
+   }, []);
+
+   useEffect(() => {
+      placeCharacter();
+   });
+
    return (
-      <div className="camera">
-         <Map />
-      </div>
+      <Fragment>
+         <div className="camera">
+            <Map />
+         </div>
+      </Fragment>
    );
 }
 
