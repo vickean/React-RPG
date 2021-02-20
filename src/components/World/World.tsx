@@ -1,4 +1,4 @@
-import React, { Fragment, useCallback, useEffect, useReducer, useRef } from "react";
+import React, { Fragment, useEffect, useReducer, useRef } from "react";
 import "./World.css";
 interface WorldState {
    posX: number;
@@ -35,8 +35,8 @@ enum ActionType {
 }
 
 export default function World() {
-   const character = document.querySelector(".character");
-   const map = document.querySelector(".map");
+   const character = document.querySelector<HTMLElement>(".character");
+   const map = document.querySelector<HTMLElement>(".map");
    const camera = useRef<HTMLDivElement>(null);
 
    const reducer = (state: WorldState, action: Action): WorldState => {
@@ -112,8 +112,6 @@ export default function World() {
       const dir = keys[event.key];
       const index = heldDirections.indexOf(dir);
 
-      console.log("KEYUP>>> ", heldDirections, state.heldDirections);
-
       if (index > -1) {
          heldDirections.splice(index, 1);
          dispatch({
@@ -150,7 +148,7 @@ export default function World() {
             dispatch({
                type: ActionType.UpdateCharacterPosition,
                payload: {
-                  posX: state.posY + state.speed,
+                  posY: state.posY + state.speed,
                },
             });
          }
@@ -158,20 +156,72 @@ export default function World() {
             dispatch({
                type: ActionType.UpdateCharacterPosition,
                payload: {
-                  posX: state.posX - state.speed,
+                  posY: state.posY - state.speed,
                },
             });
          }
       }
 
-      console.log(held_direction, state.heldDirections);
-
       dispatch({
          type: ActionType.UpdateFacingWalking,
          payload: {
+            facing: held_direction || state.facing,
             walking: held_direction ? "true" : "false",
          },
       });
+
+      const leftLimit = -8;
+      const rightLimit = 16 * 11 + 8;
+      const topLimit = -8 + 32;
+      const bottomLimit = 16 * 7;
+
+      if (state.posX < leftLimit) {
+         dispatch({
+            type: ActionType.UpdateCharacterPosition,
+            payload: {
+               posX: leftLimit,
+            },
+         });
+      }
+      if (state.posX > rightLimit) {
+         dispatch({
+            type: ActionType.UpdateCharacterPosition,
+            payload: {
+               posX: rightLimit,
+            },
+         });
+      }
+      if (state.posY < topLimit) {
+         dispatch({
+            type: ActionType.UpdateCharacterPosition,
+            payload: {
+               posY: topLimit,
+            },
+         });
+      }
+      if (state.posY > bottomLimit) {
+         dispatch({
+            type: ActionType.UpdateCharacterPosition,
+            payload: {
+               posY: bottomLimit,
+            },
+         });
+      }
+
+      const camera_left = pixelSize * 66;
+      const camera_top = pixelSize * 42;
+
+      if (map !== null) {
+         map.style.transform = `translate3d( ${
+            -state.posX * pixelSize + camera_left
+         }px, ${-state.posY * pixelSize + camera_top}px, 0 )`;
+      }
+
+      if (character !== null) {
+         character.style.transform = `translate3d( ${state.posX * pixelSize}px, ${
+            state.posY * pixelSize
+         }px, 0 )`;
+      }
    };
 
    const focusOnCamera = () => {
@@ -183,6 +233,10 @@ export default function World() {
    useEffect(() => {
       focusOnCamera();
    });
+
+   useEffect(() => {
+      placeCharacter();
+   }, []);
 
    useEffect(() => {
       placeCharacter();
