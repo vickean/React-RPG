@@ -9,17 +9,12 @@ interface WorldState {
    walking: string;
 }
 
-interface Action {
-   type: string;
-   payload: any;
-}
-
-enum directions {
-   UP = "up",
-   DOWN = "down",
-   LEFT = "left",
-   RIGHT = "right",
-}
+const directions: { [index: string]: string } = {
+   UP: "up",
+   DOWN: "down",
+   LEFT: "left",
+   RIGHT: "right",
+};
 
 const keys: { [index: string]: string } = {
    ArrowUp: directions.UP,
@@ -28,53 +23,16 @@ const keys: { [index: string]: string } = {
    ArrowDown: directions.DOWN,
 };
 
-enum ActionType {
-   UpdateCharacterPosition = "UPDATE_CHARACTER_POSITION",
-   UpdateHeldDirections = "UPDATE_HELD_DIRECTIONS",
-   UpdateFacingWalking = "UPDATE_FACING_WALKING",
-}
-
 export default function World() {
    const character = document.querySelector<HTMLElement>(".character");
    const map = document.querySelector<HTMLElement>(".map");
    const camera = useRef<HTMLDivElement>(null);
 
-   const reducer = (state: WorldState, action: Action): WorldState => {
-      switch (action.type) {
-         case ActionType.UpdateCharacterPosition: {
-            let newPosX: number = state.posX;
-            let newPosY: number = state.posY;
-
-            if ("posX" in action.payload) {
-               newPosX = action.payload.posX;
-            }
-
-            if ("posY" in action.payload) {
-               newPosY = action.payload.posY;
-            }
-
-            return { ...state, posX: newPosX, posY: newPosY };
-         }
-         case ActionType.UpdateHeldDirections: {
-            return { ...state, heldDirections: action.payload };
-         }
-         case ActionType.UpdateFacingWalking: {
-            let newFacing: string = state.facing;
-            let newWalking: string = state.walking;
-
-            if ("facing" in action.payload) {
-               newFacing = action.payload.facing;
-            }
-
-            if ("walking" in action.payload) {
-               newWalking = action.payload.walking;
-            }
-
-            return { ...state, facing: newFacing, walking: newWalking };
-         }
-         default:
-            return state;
-      }
+   const reducer = (
+      prevState: WorldState,
+      updatedProperty: Partial<WorldState>
+   ): WorldState => {
+      return { ...prevState, ...updatedProperty };
    };
 
    const initialState: WorldState = {
@@ -92,17 +50,13 @@ export default function World() {
       const heldDirections = [...state.heldDirections];
       const dir = keys[event.key];
 
+      console.log("KD>>> ", dir);
+
       if (dir && heldDirections.indexOf(dir) === -1) {
          heldDirections.unshift(dir);
          dispatch({
-            type: ActionType.UpdateHeldDirections,
-            payload: heldDirections,
-         });
-         dispatch({
-            type: ActionType.UpdateFacingWalking,
-            payload: {
-               facing: dir,
-            },
+            heldDirections,
+            facing: dir,
          });
       }
    };
@@ -115,8 +69,7 @@ export default function World() {
       if (index > -1) {
          heldDirections.splice(index, 1);
          dispatch({
-            type: ActionType.UpdateHeldDirections,
-            payload: heldDirections,
+            heldDirections,
          });
       }
    };
@@ -126,48 +79,35 @@ export default function World() {
          getComputedStyle(document.documentElement).getPropertyValue("--pixel-size")
       );
 
+      console.log("PC>>>", state.posX, state.posY, pixelSize);
+
       const held_direction = state.heldDirections[0];
       if (held_direction) {
          if (held_direction === directions.RIGHT) {
             dispatch({
-               type: ActionType.UpdateCharacterPosition,
-               payload: {
-                  posX: state.posX + state.speed,
-               },
+               posX: state.posX + state.speed,
             });
          }
          if (held_direction === directions.LEFT) {
             dispatch({
-               type: ActionType.UpdateCharacterPosition,
-               payload: {
-                  posX: state.posX - state.speed,
-               },
+               posX: state.posX - state.speed,
             });
          }
          if (held_direction === directions.DOWN) {
             dispatch({
-               type: ActionType.UpdateCharacterPosition,
-               payload: {
-                  posY: state.posY + state.speed,
-               },
+               posY: state.posY + state.speed,
             });
          }
          if (held_direction === directions.UP) {
             dispatch({
-               type: ActionType.UpdateCharacterPosition,
-               payload: {
-                  posY: state.posY - state.speed,
-               },
+               posY: state.posY - state.speed,
             });
          }
       }
 
       dispatch({
-         type: ActionType.UpdateFacingWalking,
-         payload: {
-            facing: held_direction || state.facing,
-            walking: held_direction ? "true" : "false",
-         },
+         facing: held_direction || state.facing,
+         walking: held_direction ? "true" : "false",
       });
 
       const leftLimit = -8;
@@ -177,34 +117,22 @@ export default function World() {
 
       if (state.posX < leftLimit) {
          dispatch({
-            type: ActionType.UpdateCharacterPosition,
-            payload: {
-               posX: leftLimit,
-            },
+            posX: leftLimit,
          });
       }
       if (state.posX > rightLimit) {
          dispatch({
-            type: ActionType.UpdateCharacterPosition,
-            payload: {
-               posX: rightLimit,
-            },
+            posX: rightLimit,
          });
       }
       if (state.posY < topLimit) {
          dispatch({
-            type: ActionType.UpdateCharacterPosition,
-            payload: {
-               posY: topLimit,
-            },
+            posY: topLimit,
          });
       }
       if (state.posY > bottomLimit) {
          dispatch({
-            type: ActionType.UpdateCharacterPosition,
-            payload: {
-               posY: bottomLimit,
-            },
+            posY: bottomLimit,
          });
       }
 
@@ -231,12 +159,13 @@ export default function World() {
    };
 
    useEffect(() => {
-      focusOnCamera();
-   });
+      placeCharacter();
+      console.log("Init");
+   }, []);
 
    useEffect(() => {
-      placeCharacter();
-   }, []);
+      focusOnCamera();
+   });
 
    useEffect(() => {
       placeCharacter();
