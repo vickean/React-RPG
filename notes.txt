@@ -1,0 +1,5 @@
+NOTES:
+1. Let CSS handle animations where possible.
+
+TODO:
+1. Fix movement control and animation.

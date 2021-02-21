@@ -7,6 +7,10 @@ interface WorldState {
    speed: number;
    facing: string;
    walking: string;
+   pixelSize: number;
+   keyDown: boolean;
+   cameraLeft: number;
+   cameraTop: number;
 }
 
 const directions: { [index: string]: string } = {
@@ -27,6 +31,10 @@ export default function World() {
    const character = document.querySelector<HTMLElement>(".character");
    const map = document.querySelector<HTMLElement>(".map");
    const camera = useRef<HTMLDivElement>(null);
+   const leftLimit: number = -8;
+   const rightLimit: number = 16 * 11 + 8;
+   const topLimit: number = -8 + 32;
+   const bottomLimit: number = 16 * 7;
 
    const reducer = (
       prevState: WorldState,
@@ -42,6 +50,10 @@ export default function World() {
       speed: 1,
       facing: "down",
       walking: "false",
+      pixelSize: 0,
+      keyDown: false,
+      cameraLeft: 0,
+      cameraTop: 0,
    };
 
    const [state, dispatch] = useReducer(reducer, initialState);
@@ -50,15 +62,16 @@ export default function World() {
       const heldDirections = [...state.heldDirections];
       const dir = keys[event.key];
 
-      console.log("KD>>> ", dir);
-
       if (dir && heldDirections.indexOf(dir) === -1) {
          heldDirections.unshift(dir);
          dispatch({
             heldDirections,
             facing: dir,
+            keyDown: true,
          });
       }
+
+      placeCharacter();
    };
 
    const onKeyUp = (event: React.KeyboardEvent) => {
@@ -70,86 +83,69 @@ export default function World() {
          heldDirections.splice(index, 1);
          dispatch({
             heldDirections,
+            keyDown: false,
          });
       }
+
+      placeCharacter();
    };
 
-   const placeCharacter = () => {
+   const getPixelSize = () => {
       const pixelSize = parseInt(
          getComputedStyle(document.documentElement).getPropertyValue("--pixel-size")
       );
 
-      console.log("PC>>>", state.posX, state.posY, pixelSize);
+      const cameraLeft = pixelSize * 66;
+      const cameraTop = pixelSize * 42;
+
+      dispatch({
+         pixelSize,
+         cameraLeft,
+         cameraTop,
+      });
+   };
+
+   const placeCharacter = () => {
+      let posX = state.posX;
+      let posY = state.posY;
 
       const held_direction = state.heldDirections[0];
       if (held_direction) {
          if (held_direction === directions.RIGHT) {
-            dispatch({
-               posX: state.posX + state.speed,
-            });
+            posX = state.posX + state.speed;
          }
          if (held_direction === directions.LEFT) {
-            dispatch({
-               posX: state.posX - state.speed,
-            });
+            posX = state.posX - state.speed;
          }
          if (held_direction === directions.DOWN) {
-            dispatch({
-               posY: state.posY + state.speed,
-            });
+            posY = state.posY + state.speed;
          }
          if (held_direction === directions.UP) {
-            dispatch({
-               posY: state.posY - state.speed,
-            });
+            posY = state.posY - state.speed;
          }
       }
 
+      if (posX < leftLimit) {
+         posX = leftLimit;
+      }
+      if (posX > rightLimit) {
+         posX = rightLimit;
+      }
+      if (posY < topLimit) {
+         posY = topLimit;
+      }
+      if (posY > bottomLimit) {
+         posY = bottomLimit;
+      }
+
+      console.log("PC>>> ", held_direction, state.walking);
+
       dispatch({
+         posX,
+         posY,
          facing: held_direction || state.facing,
          walking: held_direction ? "true" : "false",
       });
-
-      const leftLimit = -8;
-      const rightLimit = 16 * 11 + 8;
-      const topLimit = -8 + 32;
-      const bottomLimit = 16 * 7;
-
-      if (state.posX < leftLimit) {
-         dispatch({
-            posX: leftLimit,
-         });
-      }
-      if (state.posX > rightLimit) {
-         dispatch({
-            posX: rightLimit,
-         });
-      }
-      if (state.posY < topLimit) {
-         dispatch({
-            posY: topLimit,
-         });
-      }
-      if (state.posY > bottomLimit) {
-         dispatch({
-            posY: bottomLimit,
-         });
-      }
-
-      const camera_left = pixelSize * 66;
-      const camera_top = pixelSize * 42;
-
-      if (map !== null) {
-         map.style.transform = `translate3d( ${
-            -state.posX * pixelSize + camera_left
-         }px, ${-state.posY * pixelSize + camera_top}px, 0 )`;
-      }
-
-      if (character !== null) {
-         character.style.transform = `translate3d( ${state.posX * pixelSize}px, ${
-            state.posY * pixelSize
-         }px, 0 )`;
-      }
    };
 
    const focusOnCamera = () => {
@@ -159,9 +155,8 @@ export default function World() {
    };
 
    useEffect(() => {
-      placeCharacter();
-      console.log("Init");
-   }, []);
+      getPixelSize();
+   }, [map, character]);
 
    useEffect(() => {
       focusOnCamera();
@@ -169,12 +164,28 @@ export default function World() {
 
    useEffect(() => {
       placeCharacter();
-   }, [state.heldDirections]);
+   }, [state.pixelSize]);
+
+   useEffect(() => {
+      if (map !== null) {
+         map.style.transform = `translate3d( ${
+            -state.posX * state.pixelSize + state.cameraLeft
+         }px, ${-state.posY * state.pixelSize + state.cameraTop}px, 0 )`;
+      }
+
+      if (character !== null) {
+         character.style.transform = `translate3d( ${
+            state.posX * state.pixelSize
+         }px, ${state.posY * state.pixelSize}px, 0 )`;
+      }
+   }, [state.posX, state.posY]);
 
    useEffect(() => {
       character?.setAttribute("data-facing", state.facing);
       character?.setAttribute("data-walking", state.walking);
    }, [state.facing, state.walking]);
+
+   // console.log("State", state.keyDown, state.walking, state.heldDirections);
 
    return (
       <Fragment>
